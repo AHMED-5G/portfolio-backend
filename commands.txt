@@ -1,0 +1,7 @@
+// generate resource 
+nest g resource posts
+
+//new controller 
+nest generate controller user
+
+

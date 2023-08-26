@@ -1,8 +1,11 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
+import { config } from 'dotenv';
+//load config
+config();
 
-console.log('database.module.ts -> ', process.env.DB_HOST);
+console.log('database.module.ts -> ', process.env.DB_PORT);
 @Module({
   imports: [
     TypeOrmModule.forRootAsync({
@@ -24,7 +27,7 @@ console.log('database.module.ts -> ', process.env.DB_HOST);
 
         const postgressConfig = {
           type: 'postgres' as const,
-          ...commonConfig,
+          // ...commonConfig,
           synchronize: false,
         };
 

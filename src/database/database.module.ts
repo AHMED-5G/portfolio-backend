@@ -5,23 +5,19 @@ import { config } from 'dotenv';
 //load config
 config();
 
-console.log('database.module.ts -> ', process.env.DB_PORT);
+console.log('database.module.ts  -> ', process.env.NODE_ENV);
 @Module({
   imports: [
     TypeOrmModule.forRootAsync({
       useFactory: (configService: ConfigService) => {
-        const commonConfig = {
+        const mysqlConfig = {
+          type: 'mysql' as const,
           host: configService.getOrThrow('DB_HOST'),
           port: configService.getOrThrow('DB_PORT'),
           database: configService.getOrThrow('DB_NAME'),
           username: configService.getOrThrow('DB_USERNAME'),
           password: configService.getOrThrow('DB_PASSWORD'),
           autoLoadEntities: true,
-        };
-
-        const mysqlConfig = {
-          type: 'mysql' as const,
-          ...commonConfig,
           synchronize: process.env.NODE_ENV === 'development',
         };
 
@@ -31,7 +27,9 @@ console.log('database.module.ts -> ', process.env.DB_PORT);
           synchronize: false,
         };
 
-        return process.env.DB_TYPE === 'mysql' ? mysqlConfig : postgressConfig;
+        return process.env.NODE_ENV === 'development'
+          ? mysqlConfig
+          : postgressConfig;
       },
       inject: [ConfigService],
     }),

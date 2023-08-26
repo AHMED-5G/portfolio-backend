@@ -7,7 +7,7 @@ cd shared-types
 # GIT_PATH=/usr/bin/git
 
 # Fetch the latest changes from the remote repository
-$GIT_PATH fetch
+git pull
 
 # Merge the remote changes with your local version
 # $GIT_PATH merge origin/master

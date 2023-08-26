@@ -10,4 +10,4 @@ GIT_PATH=/usr/bin/git
 $GIT_PATH fetch
 
 # Merge the remote changes with your local version
-$GIT_PATH merge origin/master
+# $GIT_PATH merge origin/master

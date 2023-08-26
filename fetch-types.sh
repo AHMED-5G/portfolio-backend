@@ -4,7 +4,7 @@
 cd shared-types
 
 # Path to the git executable
-GIT_PATH=/usr/bin/git
+# GIT_PATH=/usr/bin/git
 
 # Fetch the latest changes from the remote repository
 $GIT_PATH fetch

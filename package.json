@@ -21,7 +21,8 @@
     "typeorm": "ts-node ./node_modules/typeorm/cli.js",
     "typeorm:create-migrations": "npm run typeorm -- migration:create ./migrations/$npm_config_name",
     "typeorm:run-migrations": "npm run typeorm migration:run -- -d ./typeOrm.config.ts",
-    "typeorm:revert-migrations": "npm run typeorm  migration:revert -- -d ./typeOrm.config.ts"
+    "typeorm:revert-migrations": "npm run typeorm  migration:revert -- -d ./typeOrm.config.ts",
+    "fetch-types": "./fetch-types.sh"
   },
   "dependencies": {
     "@nestjs/cli": "^10.0.0",

@@ -1,0 +1,3 @@
+[submodule "shared-types"]
+	path = shared-types
+	url = git@github.com:AHMED-5G/portfolio-shared-data.git

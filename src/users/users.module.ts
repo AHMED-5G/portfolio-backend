@@ -5,6 +5,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
 import { JwtModule } from '@nestjs/jwt';
 import { config } from 'dotenv';
+import { ResetToken } from './entities/resetToken.entity';
 
 config(); // Load environment variables from .env file
 
@@ -13,13 +14,13 @@ const secret = process.env.JWT_SECRET;
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([User]),
+    TypeOrmModule.forFeature([User, ResetToken]),
     JwtModule.register({
-      secret: 'secret',
+      secret,
       signOptions: {
         expiresIn: 3600,
       },
-    }), 
+    }),
   ],
   controllers: [UsersController],
   providers: [UsersService],

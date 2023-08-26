@@ -3,7 +3,7 @@ name: Fetch Submodule
 on:
   push:
     paths:
-      - 'shared-types/**'
+      - '../shared-types/**'
 
 jobs:
   fetch-submodule:

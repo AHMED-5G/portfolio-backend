@@ -1,11 +1,13 @@
-import { Injectable } from '@nestjs/common';
-import { CreateUserDto } from './dto/create-user.dto';
-import { User } from './entities/user.entity';
-import { EntityManager, Repository } from 'typeorm';
-import { InjectRepository } from '@nestjs/typeorm';
-import { validate } from 'class-validator';
+import { Injectable } from "@nestjs/common";
+import { CreateUserDto } from "./dto/create-user.dto";
+import { User } from "./entities/user.entity";
+import { EntityManager, Repository } from "typeorm";
+import { InjectRepository } from "@nestjs/typeorm";
+import { validate } from "class-validator";
+import { ResetToken } from "./entities/resetToken.entity";
+import { ResetPasswordRequireData } from "shared-data/constants/requestsData";
 
-import { ResetToken } from './entities/resetToken.entity';
+import { hashPassword } from "src/utils/heloerfunctions";
 
 @Injectable()
 export class UsersService {
@@ -16,7 +18,40 @@ export class UsersService {
     @InjectRepository(ResetToken)
     private readonly resetTokensRepository: Repository<ResetToken>,
   ) {}
-  async createResetToken(email: string): Promise<ResetToken['token']> {
+
+  async resetPassword(body: ResetPasswordRequireData): Promise<User> {
+    const resetTokenObject = await this.resetTokensRepository.findOne({
+      where: {
+        email: body.email,
+      },
+    });
+
+    const expirationTime = +resetTokenObject.expire_timeStamp;
+    const currentTimestamp = Date.now();
+    const oneHourInMilliseconds = 60 * 60 * 1000;
+
+    if (
+      resetTokenObject.token !== body.code ||
+      expirationTime < currentTimestamp ||
+      expirationTime > currentTimestamp + oneHourInMilliseconds
+    ) {
+      return null;
+    }
+
+    const user = await this.usersRepository.findOne({
+      where: {
+        email: body.email,
+      },
+    });
+
+    user.password = hashPassword(body.newPassword);
+
+    const savedUser = await this.usersRepository.save(user);
+    if (savedUser) {
+      return user;
+    }
+  }
+  async createResetToken(email: string): Promise<ResetToken["token"]> {
     // Create a timestamp for 1 hour from now in Unix format
     const timeStampInUnix = Date.now() + 60 * 60 * 1000;
 
@@ -38,7 +73,7 @@ export class UsersService {
   async create(createUserDto: CreateUserDto) {
     const errors = await validate(createUserDto);
     if (errors.length > 0) {
-      throw new Error('Validation failed');
+      throw new Error("Validation failed");
     }
     const user = new User(createUserDto);
     await this.entityManager.save(user);
@@ -48,7 +83,7 @@ export class UsersService {
     return `This action returns all users`;
   }
 
-  findOne(id: User['id']) {
+  findOne(id: User["id"]) {
     return this.usersRepository.findOne({ where: { id } });
   }
 

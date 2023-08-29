@@ -6,9 +6,7 @@ import {
   // Patch,
   Param,
   Delete,
-  BadRequestException,
   Headers,
-  Res,
 } from "@nestjs/common";
 import * as bcrypt from "bcrypt";
 import { UsersService } from "./users.service";
@@ -17,19 +15,20 @@ import { CreateUserDto } from "./dto/create-user.dto";
 import { User } from "./entities/user.entity";
 import { JwtService } from "@nestjs/jwt";
 import * as nodemailer from "nodemailer";
-import { Response } from "express";
 import { ApiResponse } from "shared-data/types";
 import {
+  MeSuccessObject,
   RequestLoginSuccessObject,
   ResetPasswordRequireData,
 } from "shared-data/constants/requestsData";
 import {
-  LOGIN_PATH,
-  REGISTER_PATH,
-  REQUEST_RESET_PASSWORD_PATH,
-  RESET_PASSWORD_PATH,
-} from "shared-data/constants/apiUrls";
-import { ApiResponseClass, hashPassword } from "src/utils/heloerfunctions";
+  ApiResponseClass,
+  hashPassword,
+} from "../../src/utils/heloerfunctions";
+import { MeUserResponse } from "./dto/user.dto";
+import { plainToClass } from "class-transformer";
+import { UserD } from "./decorators/user.decorator";
+import { UserTokenPayload } from "src/types";
 
 @Controller("users")
 export class UsersController {
@@ -38,19 +37,20 @@ export class UsersController {
     private jwtService: JwtService,
   ) {}
 
-  @Post(REGISTER_PATH)
+  @Post("register")
   async create(@Body() createUserDto: CreateUserDto) {
     const hashedPassword = hashPassword(createUserDto.password);
     createUserDto.password = hashedPassword;
     return this.usersService.create(createUserDto);
   }
 
-  @Post(LOGIN_PATH)
+  @Post("login")
   async login(
     @Body("email") email: User["email"],
     @Body("password") password: User["password"],
   ): Promise<ApiResponse<RequestLoginSuccessObject>> {
     const user = await this.usersService.findOneByEmail(email);
+
     if (!user || !bcrypt.compareSync(password, user.password)) {
       return ApiResponseClass.failureResponse({
         codeMessage: "Invalid credentials",
@@ -60,7 +60,6 @@ export class UsersController {
     try {
       const jwt = await this.jwtService.signAsync({ id: user.id });
       if (!jwt) {
-        // return new ApiException("Invalid JWT", "0").asApiResponse();
         return ApiResponseClass.failureResponse({
           codeMessage: "Invalid JWT",
         });
@@ -68,70 +67,49 @@ export class UsersController {
       return ApiResponseClass.successResponse({
         jwt,
       });
-
-      return {
-        status: true,
-        data: { jwt },
-      };
     } catch (error) {
       return ApiResponseClass.failureResponse({
         codeMessage: "Internal Server Error",
       });
-      // return new ApiException("Internal Server Error", "0").asApiResponse();
     }
   }
 
   @Get("me")
   async user(
     @Headers("authorization") authorization: string,
-    @Res() res: Response,
-  ): Promise<ApiResponse<User>> {
+    // @Res() res: Response,
+  ): Promise<ApiResponse<MeSuccessObject>> {
     const jwt = authorization?.split(" ")[1];
     const data = await this.jwtService.verifyAsync(jwt);
 
     if (!data) {
-      res.status(401).json({
-        status: false,
-        code: res.statusCode,
-        error: {
-          codeMessage: "Unauthorized",
-          codeError: "Invalid token",
-        },
+      return ApiResponseClass.failureResponse({
+        codeMessage: "Invalid token",
       });
-      return;
     }
 
-    const user = await this.usersService.findOne(data["id"]);
-
+    const user: User = await this.usersService.findOne(data["id"]);
     if (!user) {
-      res.status(401).json({
-        status: false,
-        code: res.statusCode,
-        error: {
-          codeMessage: "Unauthorized",
-          codeError: "0",
-        },
+      return ApiResponseClass.failureResponse({
+        codeMessage: "User not found",
       });
-      return;
     }
 
-    delete user.password;
+    const transformedUser: MeUserResponse = plainToClass(MeUserResponse, user);
 
-    res.status(200).json({
-      status: true,
-      code: res.statusCode,
-      data: user,
-    });
+    return ApiResponseClass.successResponse(transformedUser);
   }
 
   //reset password
-  @Post(REQUEST_RESET_PASSWORD_PATH)
+  @Post("request-reset-password")
   async requestRestPassword(
     @Body("email") email: User["email"],
   ): Promise<ApiResponse<null>> {
     const user = await this.usersService.findOneByEmail(email);
     if (!user) {
-      throw new BadRequestException("invalid credentials");
+      return ApiResponseClass.failureResponse({
+        codeMessage: "User not found",
+      });
     }
 
     const transporter = nodemailer.createTransport({
@@ -180,7 +158,6 @@ export class UsersController {
           console.log("Email sent successfully!");
           return {
             status: true,
-            code: 200,
           };
         }
       });
@@ -189,7 +166,7 @@ export class UsersController {
     // return new ApiException("Unknown error", "0").asApiResponse();
   }
 
-  @Post(RESET_PASSWORD_PATH)
+  @Post("reset-password")
   async resetPassword(
     @Body() data: ResetPasswordRequireData,
   ): Promise<ApiResponse<null>> {
@@ -203,6 +180,19 @@ export class UsersController {
       // return new ApiResponseClass(true, 200, null).asApiResponse();
     }
     return ApiResponseClass.failureResponse({ codeMessage: "Unknown error" });
+  }
+
+  @Post("update-user-data")
+  async updateUser(
+    @UserD() user: UserTokenPayload,
+  ): Promise<ApiResponse<null>> {
+    if (!user) {
+      return ApiResponseClass.failureResponse({
+        codeMessage: "User not found",
+      });
+    }
+    console.log("users.controller.ts -> UsersController -> ", user.id);
+    return ApiResponseClass.successResponse(null);
   }
 
   @Get()

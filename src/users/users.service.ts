@@ -6,8 +6,7 @@ import { InjectRepository } from "@nestjs/typeorm";
 import { validate } from "class-validator";
 import { ResetToken } from "./entities/resetToken.entity";
 import { ResetPasswordRequireData } from "shared-data/constants/requestsData";
-
-import { hashPassword } from "src/utils/heloerfunctions";
+import { hashPassword } from "../../src/utils/functions";
 
 @Injectable()
 export class UsersService {

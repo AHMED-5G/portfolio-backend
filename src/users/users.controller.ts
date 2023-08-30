@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   Headers,
+  UseGuards,
 } from "@nestjs/common";
 import * as bcrypt from "bcrypt";
 import { UsersService } from "./users.service";
@@ -21,14 +22,13 @@ import {
   RequestLoginSuccessObject,
   ResetPasswordRequireData,
 } from "shared-data/constants/requestsData";
-import {
-  ApiResponseClass,
-  hashPassword,
-} from "../../src/utils/heloerfunctions";
+
 import { MeUserResponse } from "./dto/user.dto";
 import { plainToClass } from "class-transformer";
 import { UserD } from "./decorators/user.decorator";
 import { UserTokenPayload } from "src/types";
+import { AuthGuard } from "../../src/guards/auth.guard";
+import { ApiResponseClass, hashPassword } from "../utils/functions";
 
 @Controller("users")
 export class UsersController {
@@ -74,6 +74,7 @@ export class UsersController {
     }
   }
 
+  @UseGuards(AuthGuard)
   @Get("me")
   async user(
     @Headers("authorization") authorization: string,
@@ -103,7 +104,7 @@ export class UsersController {
   //reset password
   @Post("request-reset-password")
   async requestRestPassword(
-    @Body("email") email: User["email"],
+    @Body("email") email: string,
   ): Promise<ApiResponse<null>> {
     const user = await this.usersService.findOneByEmail(email);
     if (!user) {
@@ -191,7 +192,6 @@ export class UsersController {
         codeMessage: "User not found",
       });
     }
-    console.log("users.controller.ts -> UsersController -> ", user.id);
     return ApiResponseClass.successResponse(null);
   }
 

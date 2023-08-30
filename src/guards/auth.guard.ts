@@ -2,13 +2,11 @@
 import {
   CanActivate,
   ExecutionContext,
-  Injectable,
   UnauthorizedException,
 } from "@nestjs/common";
 import * as jsonwebtoken from "jsonwebtoken";
 import { ApiResponseClass } from "../utils/functions";
 
-@Injectable()
 export class AuthGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest();

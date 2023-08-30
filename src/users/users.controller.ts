@@ -29,6 +29,7 @@ import { UserD } from "./decorators/user.decorator";
 import { UserTokenPayload } from "src/types";
 import { AuthGuard } from "../../src/guards/auth.guard";
 import { ApiResponseClass, hashPassword } from "../utils/functions";
+import { LoginUserDto } from "./dto/login-user.dto";
 
 @Controller("users")
 export class UsersController {
@@ -38,20 +39,28 @@ export class UsersController {
   ) {}
 
   @Post("register")
-  async create(@Body() createUserDto: CreateUserDto) {
-    const hashedPassword = hashPassword(createUserDto.password);
-    createUserDto.password = hashedPassword;
-    return this.usersService.create(createUserDto);
+  async create(
+    @Body() createUserDto: CreateUserDto,
+  ): Promise<ApiResponse<null>> {
+    try {
+      const hashedPassword = hashPassword(createUserDto.password);
+      createUserDto.password = hashedPassword;
+      this.usersService.create(createUserDto);
+      return ApiResponseClass.successResponse(null);
+    } catch (error) {
+      return ApiResponseClass.failureResponse({
+        codeMessage: "Internal Server Error",
+      });
+    }
   }
 
   @Post("login")
   async login(
-    @Body("email") email: User["email"],
-    @Body("password") password: User["password"],
+    @Body() data: LoginUserDto,
   ): Promise<ApiResponse<RequestLoginSuccessObject>> {
-    const user = await this.usersService.findOneByEmail(email);
+    const user = await this.usersService.findOneByEmail(data.email);
 
-    if (!user || !bcrypt.compareSync(password, user.password)) {
+    if (!user || !bcrypt.compareSync(data.password, user.password)) {
       return ApiResponseClass.failureResponse({
         codeMessage: "Invalid credentials",
       });
@@ -103,7 +112,7 @@ export class UsersController {
 
   //reset password
   @Post("request-reset-password")
-  async requestRestPassword(
+  async requestResetPassword(
     @Body("email") email: string,
   ): Promise<ApiResponse<null>> {
     const user = await this.usersService.findOneByEmail(email);
@@ -124,47 +133,34 @@ export class UsersController {
 
     const token = await this.usersService.createResetToken(email);
 
-    // Create the HTML template
     const htmlContent = `
-  <html>
-    <body>
-      <h1>Reset Password Code</h1>
-      <p>Your reset password code is: <strong>${token}</strong></p>
-    </body>
-  </html>
-`;
+      <html>
+        <body>
+          <h1>Reset Password Code</h1>
+          <p>Your reset password code is: <strong>${token}</strong></p>
+        </body>
+      </html>
+    `;
 
-    if (token) {
-      const mailOptions = {
-        from: {
-          address: process.env.MAIL_FROM_ADDRESS,
-          name: process.env.MAIL_FROM_NAME,
-        },
-        to:
-          process.env.NODE_ENV === "development" ? "ahmed_5g@yahoo.com" : email,
-        subject: "Reset password code ",
-        html: htmlContent,
-      };
+    const mailOptions = {
+      from: {
+        address: process.env.MAIL_FROM_ADDRESS,
+        name: process.env.MAIL_FROM_NAME,
+      },
+      to: process.env.NODE_ENV === "development" ? "ahmed_5g@yahoo.com" : email,
+      subject: "Reset password code ",
+      html: htmlContent,
+    };
 
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      //@ts-ignore
-      transporter.sendMail(mailOptions, (error: { message: any }) => {
-        if (error) {
-          console.log("Error occurred:", error.message);
-          return ApiResponseClass.failureResponse({
-            codeMessage: "cant send email",
-          });
-          // return new ApiException("cant send email", "0").asApiResponse();
-        } else {
-          console.log("Email sent successfully!");
-          return {
-            status: true,
-          };
-        }
+    try {
+      await transporter.sendMail(mailOptions);
+
+      return ApiResponseClass.successResponse(null);
+    } catch (error: unknown) {
+      return ApiResponseClass.failureResponse({
+        codeMessage: "Can't send email",
       });
     }
-    return ApiResponseClass.failureResponse({ codeMessage: "Unknown error" });
-    // return new ApiException("Unknown error", "0").asApiResponse();
   }
 
   @Post("reset-password")
@@ -173,14 +169,11 @@ export class UsersController {
   ): Promise<ApiResponse<null>> {
     const user = await this.usersService.resetPassword(data);
 
-    const isPasswordMatch =
-      user && user.password === hashPassword(data.newPassword);
-
-    if (isPasswordMatch) {
+    if (user) {
       return ApiResponseClass.successResponse(null);
-      // return new ApiResponseClass(true, 200, null).asApiResponse();
+    } else {
+      return ApiResponseClass.failureResponse({ codeMessage: "Unknown error" });
     }
-    return ApiResponseClass.failureResponse({ codeMessage: "Unknown error" });
   }
 
   @Post("update-user-data")

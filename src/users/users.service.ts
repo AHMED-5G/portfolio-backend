@@ -1,12 +1,12 @@
 import { Injectable } from "@nestjs/common";
 import { CreateUserDto } from "./dto/create-user.dto";
 import { User } from "./entities/user.entity";
-import { EntityManager, Repository } from "typeorm";
+import { EntityManager, Raw, Repository } from "typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
 import { validate } from "class-validator";
 import { ResetToken } from "./entities/resetToken.entity";
 import { ResetPasswordRequireData } from "shared-data/constants/requestsData";
-import { hashPassword } from "../../src/utils/functions";
+import { hashPassword } from "../../src/utils";
 
 @Injectable()
 export class UsersService {
@@ -19,35 +19,40 @@ export class UsersService {
   ) {}
 
   async resetPassword(body: ResetPasswordRequireData): Promise<User> {
-    const resetTokenObject = await this.resetTokensRepository.findOne({
-      where: {
-        email: body.email,
-      },
-    });
+    try {
+      const resetTokenObject = await this.resetTokensRepository.findOne({
+        where: {
+          email: body.email,
+          id: Raw((alias) => `${alias} = (SELECT MAX(id) FROM reset_token)`),
+        },
+      });
 
-    const expirationTime = +resetTokenObject.expire_timeStamp;
-    const currentTimestamp = Date.now();
-    const oneHourInMilliseconds = 60 * 60 * 1000;
+      const expirationTime = +resetTokenObject.expire_timeStamp;
+      const currentTimestamp = Date.now();
+      const oneHourInMilliseconds = 60 * 60 * 1000;
 
-    if (
-      resetTokenObject.token !== body.code ||
-      expirationTime < currentTimestamp ||
-      expirationTime > currentTimestamp + oneHourInMilliseconds
-    ) {
+      if (
+        resetTokenObject.token !== body.code ||
+        expirationTime < currentTimestamp ||
+        expirationTime > currentTimestamp + oneHourInMilliseconds
+      ) {
+        return null;
+      }
+
+      const user = await this.usersRepository.findOne({
+        where: {
+          email: body.email,
+        },
+      });
+      user.password = hashPassword(body.newPassword);
+      const savedUser = await this.usersRepository.save(user);
+
+      if (savedUser) {
+        return user;
+      }
+    } catch (error) {
+      console.error(error);
       return null;
-    }
-
-    const user = await this.usersRepository.findOne({
-      where: {
-        email: body.email,
-      },
-    });
-
-    user.password = hashPassword(body.newPassword);
-
-    const savedUser = await this.usersRepository.save(user);
-    if (savedUser) {
-      return user;
     }
   }
   async createResetToken(email: string): Promise<ResetToken["token"]> {

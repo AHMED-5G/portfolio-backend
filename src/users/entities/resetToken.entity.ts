@@ -11,10 +11,4 @@ export class ResetToken extends AbstractEntity<ResetToken> {
 
   @Column()
   expire_timeStamp: string;
-
-  @Column({ nullable: true })
-  testMigrations: string;
-
-  @Column({ nullable: true })
-  datatime: string;
 }

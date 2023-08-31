@@ -22,7 +22,6 @@ import {
   RequestLoginSuccessObject,
   ResetPasswordRequireData,
 } from "shared-data/constants/requestsData";
-
 import { MeUserResponse } from "./dto/user.dto";
 import { plainToClass } from "class-transformer";
 import { UserD } from "./decorators/user.decorator";
@@ -30,6 +29,7 @@ import { UserTokenPayload } from "src/types";
 import { AuthGuard } from "../../src/guards/auth.guard";
 import { ApiResponseClass, hashPassword } from "../utils/functions";
 import { LoginUserDto } from "./dto/login-user.dto";
+import { ApiOkResponse } from "@nestjs/swagger";
 
 @Controller("users")
 export class UsersController {
@@ -83,6 +83,9 @@ export class UsersController {
     }
   }
 
+  @ApiOkResponse({
+    type: MeUserResponse,
+  })
   @UseGuards(AuthGuard)
   @Get("me")
   async user(

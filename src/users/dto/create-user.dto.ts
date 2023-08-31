@@ -1,23 +1,16 @@
 // src/users/dto/create-user.dto.ts
 
-import { IsString, IsEmail, Length, IsOptional } from "class-validator";
+import { ApiProperty } from "@nestjs/swagger";
+import { IsString, IsEmail, Length } from "class-validator";
 
 export class CreateUserDto {
-  // @IsString()
-  // @Length(3, 30)
-  // @IsOptional()
-  // name: string;
-
   @IsString()
   @IsEmail()
+  @ApiProperty({ example: "email@example.com", required: true })
   email: string;
 
   // @IsString()
+  @ApiProperty({ example: "123456", required: true })
   @Length(6, 20)
   password: string;
-
-  // @IsString()
-  // @Length(4, 20)
-  // @IsOptional()
-  // userName: string;
 }

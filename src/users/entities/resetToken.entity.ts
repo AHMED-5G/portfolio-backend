@@ -1,5 +1,5 @@
-import { Column, Entity } from 'typeorm';
-import { AbstractEntity } from '../../database/abstract.entity';
+import { Column, Entity } from "typeorm";
+import { AbstractEntity } from "../../database/abstract.entity";
 
 @Entity()
 export class ResetToken extends AbstractEntity<ResetToken> {
@@ -11,4 +11,10 @@ export class ResetToken extends AbstractEntity<ResetToken> {
 
   @Column()
   expire_timeStamp: string;
+
+  @Column({ nullable: true })
+  testMigrations: string;
+
+  @Column({ nullable: true })
+  datatime: string;
 }

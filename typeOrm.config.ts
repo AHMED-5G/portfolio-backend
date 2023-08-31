@@ -1,8 +1,6 @@
-import { DataSource, DataSourceOptions } from 'typeorm';
-import { config } from 'dotenv';
-import { ConfigService } from '@nestjs/config';
-import { User } from 'src/users/entities/user.entity';
-import { ResetToken } from 'src/users/entities/resetToken.entity';
+import { DataSource, DataSourceOptions } from "typeorm";
+import { config } from "dotenv";
+import { ConfigService } from "@nestjs/config";
 
 // to make sure you have the env variables
 config();
@@ -10,27 +8,29 @@ config();
 const configService = new ConfigService();
 
 const mysqlConfig: DataSourceOptions = {
-  type: 'mysql',
-  host: configService.getOrThrow('DB_HOST').toString(),
-  port: configService.getOrThrow('DB_PORT').toString(),
-  database: configService.getOrThrow('DB_NAME').toString(),
-  username: configService.getOrThrow('DB_USERNAME').toString(),
-  password: configService.getOrThrow('DB_PASSWORD').toString(),
-  migrations: ['migrations/**'],
-  entities: [User, ResetToken],
+  type: "mysql",
+  host: configService.getOrThrow("SQL_DB_HOST"),
+  port: configService.getOrThrow("SQL_DB_PORT"),
+  database: configService.getOrThrow("SQL_DB_NAME"),
+  username: configService.getOrThrow("SQL_DB_USERNAME"),
+  password: configService.getOrThrow("SQL_DB_PASSWORD"),
+  synchronize: true,
+  migrations: ["dist/migrations/**"],
+  entities: ["dist/**/*.entity.js"],
 };
 
 const postgressConfig: DataSourceOptions = {
-  type: 'postgres',
-  host: configService.getOrThrow('DB_HOST').toString(),
-  port: configService.getOrThrow('DB_PORT').toString(),
-  database: configService.getOrThrow('DB_NAME').toString(),
-  username: configService.getOrThrow('DB_USERNAME').toString(),
-  password: configService.getOrThrow('DB_PASSWORD').toString(),
-  migrations: ['migrations/**'],
-  entities: [User, ResetToken],
+  type: "postgres",
+  host: configService.getOrThrow("DB_HOST"),
+  port: configService.getOrThrow("DB_PORT"),
+  database: configService.getOrThrow("DB_NAME"),
+  username: configService.getOrThrow("DB_USERNAME"),
+  password: configService.getOrThrow("DB_PASSWORD"),
+  synchronize: false,
+  migrations: ["dist/migrations/**"],
+  entities: ["dist/**/*.entity.js"],
 };
+export const myDataSourceOptions: DataSourceOptions =
+  process.env.NODE_ENV === "development" ? mysqlConfig : postgressConfig;
 
-export default new DataSource(
-  process.env.NODE_ENV === 'development' ? mysqlConfig : postgressConfig,
-);
+export default new DataSource(myDataSourceOptions);

@@ -3,7 +3,7 @@ import { AppModule } from "./app.module";
 import { ValidationPipe } from "@nestjs/common";
 
 async function bootstrap() {
-  // process.env.NODE_ENV = 'production';
+  // process.env.NODE_ENV = "production";
   const app = await NestFactory.create(AppModule);
   app.useGlobalPipes(
     new ValidationPipe({

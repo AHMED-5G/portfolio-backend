@@ -18,10 +18,10 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
-    "typeorm": "ts-node ./node_modules/typeorm/cli.js",
-    "typeorm:create-migrations": "npm run typeorm -- migration:create ./migrations/$npm_config_name",
-    "typeorm:run-migrations": "npm run typeorm migration:run -- -d ./typeOrm.config.ts",
-    "typeorm:revert-migrations": "npm run typeorm  migration:revert -- -d ./typeOrm.config.ts",
+    "typeorm": "npm run build && npx typeorm -d dist/typeOrm.config.js",
+    "typeorm:create-migrations": "npm run typeorm -- migration:generate ./migrations/$npm_config_name",
+    "typeorm:run-migrations": "npm run typeorm migration:run",
+    "typeorm:revert-migrations": "npm run typeorm  migration:revert",
     "fetch-types": "git submodule update --remote shared-data"
   },
   "dependencies": {

@@ -16,4 +16,6 @@ export class User extends AbstractEntity<User> implements Required<IUser> {
 
   @Column({ nullable: true })
   userName: string;
+
+
 }

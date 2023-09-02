@@ -1,0 +1,14 @@
+// generate resource 
+nest g resource posts
+
+//new controller 
+nest generate controller user
+
+
+//kill 3306
+sudo lsof -i :3306
+sudo kill <PID>
+
+
+//migrations
+npm run typeorm:create-migrations --name=? 

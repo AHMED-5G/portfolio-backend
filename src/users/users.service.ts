@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { CreateUserDto } from "./dto/create-user.dto";
 import { User } from "./entities/user.entity";
-import { EntityManager, Raw, Repository } from "typeorm";
+import { Raw, Repository } from "typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
 import { validate } from "class-validator";
 import { ResetToken } from "./entities/resetToken.entity";
@@ -11,7 +11,7 @@ import { hashPassword } from "../../src/utils";
 @Injectable()
 export class UsersService {
   constructor(
-    private readonly entityManager: EntityManager,
+    // private readonly entityManager: EntityManager,
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
     @InjectRepository(ResetToken)
@@ -80,14 +80,15 @@ export class UsersService {
       throw new Error("Validation failed");
     }
     const user = new User(createUserDto);
-    await this.entityManager.save(user);
+    return this.usersRepository.save(user);
   }
 
-  findAll() {
-    return `This action returns all users`;
+  getUserById(id: number): Promise<User> {
+    return;
+    return this.usersRepository.findOne({ where: { id } });
   }
 
-  findOne(id: User["id"]) {
+  findOne(id: User["id"]): Promise<User> {
     return this.usersRepository.findOne({ where: { id } });
   }
 

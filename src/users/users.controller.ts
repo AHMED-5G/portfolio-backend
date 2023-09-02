@@ -39,7 +39,7 @@ export class UsersController {
   ) {}
 
   @Post("register")
-  async create(
+  async register(
     @Body() createUserDto: CreateUserDto,
   ): Promise<ApiResponse<null>> {
     try {
@@ -67,7 +67,12 @@ export class UsersController {
     }
 
     try {
-      const jwt = await this.jwtService.signAsync({ id: user.id });
+      const jwt = await this.jwtService.signAsync(
+        { id: user.id },
+        {
+          secret: process.env.JWT_SECRET,
+        },
+      );
       if (!jwt) {
         return ApiResponseClass.failureResponse({
           codeMessage: "Invalid JWT",
@@ -191,9 +196,23 @@ export class UsersController {
     return ApiResponseClass.successResponse(null);
   }
 
+  // @Get()
+  // findAll() {
+  //   return this.usersService.findAll();
+  // }
+
   @Get()
-  findAll() {
-    return this.usersService.findAll();
+  async getUserById(@Body() id: number): Promise<ApiResponse<User>> {
+    return;
+    const user = await this.usersService.findOne(id);
+
+    if (!user) {
+      return ApiResponseClass.failureResponse({
+        codeMessage: "User not found",
+      });
+    }
+
+    return ApiResponseClass.successResponse(user);
   }
 
   @Get(":id")

@@ -1,7 +1,7 @@
-import { User } from "src/users/entities/user.entity";
 import { RequestLoginSuccessObject } from "shared-data/constants/requestsData";
+import { IUser } from "shared-data/types";
 
-export const userStub: User = {
+export const userStub: IUser = {
   id: 1,
   name: "name",
   email: "email",

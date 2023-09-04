@@ -1,12 +1,12 @@
 import { Injectable } from "@nestjs/common";
 import { CreateUserDto } from "./dto/create-user.dto";
 import { User } from "./entities/user.entity";
-import { Raw, Repository } from "typeorm";
+import { FindOneOptions, Repository } from "typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
 import { validate } from "class-validator";
 import { ResetToken } from "./entities/resetToken.entity";
-import { ResetPasswordRequireData } from "shared-data/constants/requestsData";
 import { hashPassword } from "../../src/utils";
+import { ResetPasswordDto } from "./dto/reset-password-require-data.dto";
 
 @Injectable()
 export class UsersService {
@@ -18,14 +18,18 @@ export class UsersService {
     private readonly resetTokensRepository: Repository<ResetToken>,
   ) {}
 
-  async resetPassword(body: ResetPasswordRequireData): Promise<User> {
+  async resetPassword(body: ResetPasswordDto): Promise<User> {
     try {
-      const resetTokenObject = await this.resetTokensRepository.findOne({
-        where: {
+      const resetTokenObject: ResetToken = await this.resetTokensRepository
+        .createQueryBuilder("reset_token")
+        .where({
           email: body.email,
-          id: Raw((alias) => `${alias} = (SELECT MAX(id) FROM reset_token)`),
-        },
-      });
+        })
+        .orderBy({ createdAt: "DESC" })
+        .take(1)
+        .getOne();
+
+      if (!resetTokenObject) return null;
 
       const expirationTime = +resetTokenObject.expire_timeStamp;
       const currentTimestamp = Date.now();
@@ -44,20 +48,25 @@ export class UsersService {
           email: body.email,
         },
       });
-      user.password = hashPassword(body.newPassword);
+
+      if (!user) return null;
+
+      const hashedPassword = hashPassword(body.newPassword);
+      user.password = hashedPassword;
+
       const savedUser = await this.usersRepository.save(user);
 
-      if (savedUser) {
-        return user;
-      }
+      if (!savedUser) return null;
+      return savedUser;
     } catch (error) {
       console.error(error);
       return null;
     }
   }
+
   async createResetToken(email: string): Promise<ResetToken["token"]> {
     // Create a timestamp for 1 hour from now in Unix format
-    const timeStampInUnix = Date.now() + 60 * 60 * 1000;
+    const timeStampInUnix = (Date.now() + 60 * 60 * 1000).toString();
 
     // generate 5 digit token
     const token = Math.floor(10000 + Math.random() * 90000).toString();
@@ -88,23 +97,13 @@ export class UsersService {
     return this.usersRepository.findOne({ where: { id } });
   }
 
-  findOne(id: User["id"]): Promise<User> {
-    return this.usersRepository.findOne({ where: { id } });
+  async findOne(userId: User["id"]): Promise<User> {
+    const query: FindOneOptions<User> = { where: { id: userId } };
+    return await this.usersRepository.findOne(query);
   }
 
-  findOneByEmail(email: string): Promise<User> {
-    return this.usersRepository.findOne({
-      where: {
-        email: email,
-      },
-    });
-  }
-
-  // update(id: number, updateUserDto: UpdateUserDto) {
-  //   return `This action updates a #${id} user`;
-  // }
-
-  remove(id: number) {
-    return `This action removes a #${id} user`;
+  async findOneByEmail(email: string): Promise<User> {
+    const query: FindOneOptions<User> = { where: { email } };
+    return await this.usersRepository.findOne(query);
   }
 }

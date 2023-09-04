@@ -17,6 +17,9 @@ export class MeUserResponse implements User {
   @ApiProperty()
   userName: string;
 
+  @ApiProperty()
+  createdAt: string;
+
   @Exclude()
   password: string;
 

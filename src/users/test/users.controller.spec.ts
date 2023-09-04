@@ -8,13 +8,17 @@ import { ResetToken } from "../entities/resetToken.entity";
 import { JwtService } from "@nestjs/jwt";
 import { userStubFactory } from "test/stubs/user.stub";
 import { JSONWebTokenType } from "shared-data/types";
-
+import { MeSuccessObject } from "shared-data/constants/requestsData";
+import { MeUserResponse } from "../dto/user.dto";
+import { MyJwtSigner } from "src/utils";
+import * as bcrypt from "bcrypt";
 jest.mock("../users.service");
 
 describe("UsersController", () => {
   let userController: UsersController;
   let userService: UsersService;
   let jwtService: JwtService;
+
   const USER_REPOSITORY_TOKEN = getRepositoryToken(User);
 
   beforeEach(async () => {
@@ -24,15 +28,15 @@ describe("UsersController", () => {
         UsersService,
         {
           provide: USER_REPOSITORY_TOKEN,
-          useValue: {
-            // getUserById: jest.fn(),
-            findOne: jest.fn(),
-          },
+          useValue: {},
         },
         JwtService,
         {
           provide: getRepositoryToken(JwtService),
-          useValue: {},
+          useValue: {
+            sign: jest.fn().mockResolvedValue("token"),
+          },
+          useClass: MyJwtSigner,
         },
         ResetToken,
         {
@@ -43,6 +47,11 @@ describe("UsersController", () => {
     }).compile();
     userController = moduleRef.get<UsersController>(UsersController);
     userService = moduleRef.get<UsersService>(UsersService);
+    jwtService = moduleRef.get<JwtService>(JwtService);
+    // Mock the bcrypt library
+    jest.mock("bcrypt", () => ({
+      compareSync: jest.fn().mockReturnValue(true),
+    }));
     jest.clearAllMocks();
   });
 
@@ -54,39 +63,15 @@ describe("UsersController", () => {
     expect(userService).toBeDefined();
   });
 
-  //   describe("getUserById", () => {
-  //     describe("when get user is called", () => {
-  //       let user: User;
-  //       beforeEach(async () => {
-  //         user = (await userController.getUserById(userStubFactory().id)).data;
-  //       });
-
-  //       console.log("users.controller.spec.ts -> ", user);
-  //       test("should call user service", () => {
-  //         expect(userService.findOne).toBeCalledWith(userStubFactory().id);
-  //       });
-
-  //       test("should return user", () => {
-  //         expect(user).toEqual({
-  //           userName: "AA",
-  //         });
-  //         // expect(user).toEqual(userStubFactory());
-  //       });
-  //     });
-  //   });
-
   describe("login", () => {
     let jwt: JSONWebTokenType;
     describe("when get user is called", () => {
-      //   let data: { jwt: JSONWebTokenType };
-
-      //   let jwt: JSONWebTokenType;
       beforeEach(async () => {
         const response = await userController.login({
           email: userStubFactory().email,
           password: userStubFactory().password,
         });
-        //   .then((response) => console.log(response.data));
+
         jwt = response.data.jwt;
       });
 
@@ -96,10 +81,69 @@ describe("UsersController", () => {
         );
       });
 
-      //test its return ali jwt
-      test("should return jwt", () => {
-        // expect(jwt).toEqual(jwtService.signAsync({ id: 1 }));
+      test("should return equals jwt", async () => {
+        const myNewJwt = await jwtService.signAsync(
+          { id: userStubFactory().id },
+          {
+            secret: process.env.JWT_SECRET,
+          },
+        );
+
+        expect(jwt).toEqual(myNewJwt);
       });
+
+      it("should return a success response with a JWT token", async () => {
+        const data = userStubFactory();
+        const myNewJwt = await jwtService.signAsync(
+          { id: userStubFactory().id },
+          {
+            secret: process.env.JWT_SECRET,
+          },
+        );
+
+        const bcryptCompareSpy = jest.spyOn(bcrypt, "compareSync");
+        const result = (await userController.login(data)).data;
+        expect(result.jwt).toEqual(myNewJwt);
+        expect(bcryptCompareSpy).toHaveBeenCalledTimes(1);
+      });
+    });
+  });
+
+  describe("me", () => {
+    let user: MeSuccessObject;
+
+    beforeEach(async () => {
+      const signToken = jwtService.sign(
+        {
+          id: userStubFactory().id,
+        },
+        {
+          secret: process.env.JWT_SECRET,
+        },
+      );
+
+      const response = await userController.me("Bearer " + signToken);
+      user = response.data;
+    });
+
+    test("should call user service -> findOne", () => {
+      expect(userService.findOne).toBeCalledWith(userStubFactory().id);
+    });
+
+    it("should return user", () => {
+      const expectedUser = userStubFactory();
+      delete expectedUser.password;
+      expect(user).toEqual(expectedUser);
+    });
+
+    //it should return user as type of MeUserResponse
+    it("should return user as type of MeUserResponse", () => {
+      expect(user).toBeInstanceOf(MeUserResponse);
+    });
+
+    // user object shouldn't have password
+    it("should not have password", () => {
+      expect(user).not.toHaveProperty("password");
     });
   });
 });

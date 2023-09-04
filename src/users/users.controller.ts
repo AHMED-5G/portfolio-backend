@@ -3,24 +3,17 @@ import {
   Get,
   Post,
   Body,
-  // Patch,
-  Param,
-  Delete,
   Headers,
   UseGuards,
 } from "@nestjs/common";
 import * as bcrypt from "bcrypt";
 import { UsersService } from "./users.service";
-import { CreateUserDto } from "./dto/create-user.dto";
-// import { UpdateUserDto } from './dto/update-user.dto';
-import { User } from "./entities/user.entity";
 import { JwtService } from "@nestjs/jwt";
 import * as nodemailer from "nodemailer";
 import { ApiResponse } from "shared-data/types";
 import {
   MeSuccessObject,
   RequestLoginSuccessObject,
-  ResetPasswordRequireData,
 } from "shared-data/constants/requestsData";
 import { MeUserResponse } from "./dto/user.dto";
 import { plainToClass } from "class-transformer";
@@ -30,6 +23,10 @@ import { AuthGuard } from "../../src/guards/auth.guard";
 import { ApiResponseClass, hashPassword } from "../utils/functions";
 import { LoginUserDto } from "./dto/login-user.dto";
 import { ApiOkResponse } from "@nestjs/swagger";
+import { ResetPasswordDto } from "./dto/reset-password-require-data.dto";
+import { validate } from "class-validator";
+import { CreateUserDto } from "./dto/create-user.dto";
+import SMTPTransport from "nodemailer/lib/smtp-transport";
 
 @Controller("users")
 export class UsersController {
@@ -73,11 +70,13 @@ export class UsersController {
           secret: process.env.JWT_SECRET,
         },
       );
+
       if (!jwt) {
         return ApiResponseClass.failureResponse({
           codeMessage: "Invalid JWT",
         });
       }
+
       return ApiResponseClass.successResponse({
         jwt,
       });
@@ -93,29 +92,48 @@ export class UsersController {
   })
   @UseGuards(AuthGuard)
   @Get("me")
-  async user(
+  async me(
     @Headers("authorization") authorization: string,
-    // @Res() res: Response,
   ): Promise<ApiResponse<MeSuccessObject>> {
-    const jwt = authorization?.split(" ")[1];
-    const data = await this.jwtService.verifyAsync(jwt);
+    const token = authorization?.split(" ")[1];
 
-    if (!data) {
+    if (!token) {
       return ApiResponseClass.failureResponse({
         codeMessage: "Invalid token",
       });
     }
 
-    const user: User = await this.usersService.findOne(data["id"]);
-    if (!user) {
+    try {
+      const userData: UserTokenPayload = await this.jwtService.verifyAsync(
+        token,
+        {
+          secret: process.env.JWT_SECRET,
+        },
+      );
+
+      if (!userData || !userData["id"]) {
+        return ApiResponseClass.failureResponse({
+          codeMessage: "Invalid token",
+        });
+      }
+
+      const { id } = userData;
+      const foundUser = await this.usersService.findOne(id);
+
+      if (!foundUser) {
+        return ApiResponseClass.failureResponse({
+          codeMessage: "User not found",
+        });
+      }
+
+      const transformedUser = plainToClass(MeUserResponse, foundUser);
+
+      return ApiResponseClass.successResponse(transformedUser);
+    } catch (error) {
       return ApiResponseClass.failureResponse({
-        codeMessage: "User not found",
+        codeMessage: "Something went wrong",
       });
     }
-
-    const transformedUser: MeUserResponse = plainToClass(MeUserResponse, user);
-
-    return ApiResponseClass.successResponse(transformedUser);
   }
 
   //reset password
@@ -123,25 +141,26 @@ export class UsersController {
   async requestResetPassword(
     @Body("email") email: string,
   ): Promise<ApiResponse<null>> {
-    const user = await this.usersService.findOneByEmail(email);
-    if (!user) {
-      return ApiResponseClass.failureResponse({
-        codeMessage: "User not found",
-      });
-    }
+    try {
+      const user = await this.usersService.findOneByEmail(email);
+      if (!user) {
+        return ApiResponseClass.failureResponse({
+          codeMessage: "User not found",
+        });
+      }
 
-    const transporter = nodemailer.createTransport({
-      host: process.env.MAIL_HOST,
-      port: process.env.MAIL_PORT,
-      auth: {
-        user: process.env.MAIL_USERNAME,
-        pass: process.env.MAIL_PASSWORD,
-      },
-    });
+      const transporter = nodemailer.createTransport({
+        host: process.env.MAIL_HOST,
+        port: process.env.MAIL_PORT,
+        auth: {
+          user: process.env.MAIL_USERNAME,
+          pass: process.env.MAIL_PASSWORD,
+        },
+      } as unknown as SMTPTransport);
 
-    const token = await this.usersService.createResetToken(email);
+      const token = await this.usersService.createResetToken(email);
 
-    const htmlContent = `
+      const htmlContent = `
       <html>
         <body>
           <h1>Reset Password Code</h1>
@@ -150,37 +169,58 @@ export class UsersController {
       </html>
     `;
 
-    const mailOptions = {
-      from: {
-        address: process.env.MAIL_FROM_ADDRESS,
-        name: process.env.MAIL_FROM_NAME,
-      },
-      to: process.env.NODE_ENV === "development" ? "ahmed_5g@yahoo.com" : email,
-      subject: "Reset password code ",
-      html: htmlContent,
-    };
+      const mailOptions = {
+        from: {
+          address: process.env.MAIL_FROM_ADDRESS,
+          name: process.env.MAIL_FROM_NAME,
+        },
+        to:
+          process.env.NODE_ENV === "development" ? "ahmed_5g@yahoo.com" : email,
+        subject: "Reset password code",
+        html: htmlContent,
+      };
 
-    try {
-      await transporter.sendMail(mailOptions);
-
-      return ApiResponseClass.successResponse(null);
-    } catch (error: unknown) {
+      try {
+        await transporter.sendMail(mailOptions);
+        return ApiResponseClass.successResponse(null);
+      } catch (error: unknown) {
+        return ApiResponseClass.failureResponse({
+          codeMessage: "Can't send email",
+        });
+      }
+    } catch (error) {
       return ApiResponseClass.failureResponse({
-        codeMessage: "Can't send email",
+        codeMessage: "Something went wrong",
       });
     }
   }
 
   @Post("reset-password")
   async resetPassword(
-    @Body() data: ResetPasswordRequireData,
+    @Body() data: ResetPasswordDto,
   ): Promise<ApiResponse<null>> {
-    const user = await this.usersService.resetPassword(data);
+    try {
+      //validate data
+      const validationErrors = await validate(data);
+      if (validationErrors.length > 0) {
+        return ApiResponseClass.failureResponse({
+          codeMessage: "Validation failed",
+        });
+      }
 
-    if (user) {
-      return ApiResponseClass.successResponse(null);
-    } else {
-      return ApiResponseClass.failureResponse({ codeMessage: "Unknown error" });
+      const user = await this.usersService.resetPassword(data);
+
+      if (user) {
+        return ApiResponseClass.successResponse(null);
+      } else {
+        return ApiResponseClass.failureResponse({
+          codeMessage: "User not found",
+        });
+      }
+    } catch (error) {
+      return ApiResponseClass.failureResponse({
+        codeMessage: "Something went wrong",
+      });
     }
   }
 
@@ -190,43 +230,9 @@ export class UsersController {
   ): Promise<ApiResponse<null>> {
     if (!user) {
       return ApiResponseClass.failureResponse({
-        codeMessage: "User not found",
+        codeMessage: "Unauthorized",
       });
     }
     return ApiResponseClass.successResponse(null);
-  }
-
-  // @Get()
-  // findAll() {
-  //   return this.usersService.findAll();
-  // }
-
-  @Get()
-  async getUserById(@Body() id: number): Promise<ApiResponse<User>> {
-    return;
-    const user = await this.usersService.findOne(id);
-
-    if (!user) {
-      return ApiResponseClass.failureResponse({
-        codeMessage: "User not found",
-      });
-    }
-
-    return ApiResponseClass.successResponse(user);
-  }
-
-  @Get(":id")
-  findOne(@Param("id") id: string) {
-    return this.usersService.findOne(+id);
-  }
-
-  // @Patch(':id')
-  // update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-  //   return this.usersService.update(+id, updateUserDto);
-  // }
-
-  @Delete(":id")
-  remove(@Param("id") id: string) {
-    return this.usersService.remove(+id);
   }
 }

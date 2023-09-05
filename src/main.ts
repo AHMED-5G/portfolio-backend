@@ -8,7 +8,17 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   //swagger
-  const config = new DocumentBuilder().setTitle("Portfolio API").build();
+  const config = new DocumentBuilder()
+    .setTitle("Portfolio API")
+    .addBearerAuth(
+      {
+        type: "http",
+        scheme: "bearer",
+        bearerFormat: "JWT",
+      },
+      "JWT",
+    )
+    .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup(API_PATH, app, document);
 

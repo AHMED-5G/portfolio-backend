@@ -2,7 +2,7 @@ import { DataSource, DataSourceOptions } from "typeorm";
 import { config } from "dotenv";
 import { ConfigService } from "@nestjs/config";
 
-// to make sure you have the env variables
+// to make sure you have the env variables loaded
 config();
 
 const configService = new ConfigService();
@@ -27,7 +27,8 @@ const postgressConfig: DataSourceOptions = {
   username: configService.getOrThrow("DB_USERNAME"),
   password: configService.getOrThrow("DB_PASSWORD"),
   synchronize: false,
-  migrations: ["./migrations/**"],
+  // migrations: ["./migrations/**"],
+  migrations: ["dist/migrations/**"],
   entities: ["dist/**/*.entity.js"],
 };
 export const myDataSourceOptions: DataSourceOptions =

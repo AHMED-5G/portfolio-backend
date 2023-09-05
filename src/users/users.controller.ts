@@ -11,7 +11,6 @@ import { UsersService } from "./users.service";
 import { JwtService } from "@nestjs/jwt";
 import * as nodemailer from "nodemailer";
 import { ApiResponse } from "shared-data/types";
-
 import { MeUserResponse } from "./dto/user.dto";
 import { plainToClass } from "class-transformer";
 import { UserD } from "./decorators/user.decorator";
@@ -19,14 +18,15 @@ import { UserTokenPayload } from "src/types";
 import { AuthGuard } from "../../src/guards/auth.guard";
 import { ApiResponseClass, hashPassword } from "../utils/functions";
 import { LoginUserDto } from "./dto/login-user.dto";
-import { ApiBadRequestResponse, ApiOkResponse } from "@nestjs/swagger";
+import { ApiBearerAuth, ApiOkResponse } from "@nestjs/swagger";
 import { ResetPasswordDto } from "./dto/reset-password-require-data.dto";
 import { validate } from "class-validator";
 import { CreateUserDto } from "./dto/create-user.dto";
 import SMTPTransport from "nodemailer/lib/smtp-transport";
 import { API_PATH } from "../../shared-data/constants/apiUrls";
 import { MeSuccessObject } from "shared-data/constants";
-import { LoginResponseDto } from "./dto/login-responce.dto";
+import { LoginResponseDto } from "./dto/login-response.dto";
+import { RequestResetPasswordDto } from "./dto/request-reset-password.dto";
 
 // @UseFilters(new CustomExceptionFilter())
 @Controller(API_PATH + "/users")
@@ -97,6 +97,7 @@ export class UsersController {
     }
   }
 
+  @ApiBearerAuth("JWT")
   @ApiOkResponse({
     type: MeUserResponse,
   })
@@ -147,12 +148,15 @@ export class UsersController {
   }
 
   //reset password
+  @ApiOkResponse({
+    type: null,
+  })
   @Post("request-reset-password")
   async requestResetPassword(
-    @Body("email") email: string,
+    @Body() data: RequestResetPasswordDto,
   ): Promise<ApiResponse<null>> {
     try {
-      const user = await this.usersService.findOneByEmail(email);
+      const user = await this.usersService.findOneByEmail(data.email);
       if (!user) {
         return ApiResponseClass.failureResponse({
           codeMessage: "User not found",
@@ -168,7 +172,7 @@ export class UsersController {
         },
       } as unknown as SMTPTransport);
 
-      const token = await this.usersService.createResetToken(email);
+      const token = await this.usersService.createResetToken(data.email);
 
       const htmlContent = `
       <html>
@@ -185,7 +189,9 @@ export class UsersController {
           name: process.env.MAIL_FROM_NAME,
         },
         to:
-          process.env.NODE_ENV === "development" ? "ahmed_5g@yahoo.com" : email,
+          process.env.NODE_ENV === "development"
+            ? "ahmed_5g@yahoo.com"
+            : data.email,
         subject: "Reset password code",
         html: htmlContent,
       };
@@ -205,10 +211,6 @@ export class UsersController {
     }
   }
 
-  @ApiBadRequestResponse({
-    description: "Validation failed",
-    // type: ErrorResponseDto,
-  })
   @Post("reset-password")
   async resetPassword(
     @Body() data: ResetPasswordDto,

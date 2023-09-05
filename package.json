@@ -93,12 +93,7 @@
       "**/*.(t|j)s"
     ],
     "coverageDirectory": "../coverage",
-    "testEnvironment": "node",
-    "testPathIgnorePatterns": [
-      "<rootDir>/dist",
-      "/node_modules/",
-      "/dist/"
-    ]
+    "testEnvironment": "node"
   },
   "engines": {
     "node": ">=15"

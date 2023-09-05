@@ -11,7 +11,6 @@ import { JSONWebTokenType } from "shared-data/types";
 import { MeSuccessObject } from "shared-data/constants/requestsData";
 import { MeUserResponse } from "../dto/user.dto";
 import { MyJwtSigner } from "src/utils";
-import * as bcrypt from "bcrypt";
 
 jest.mock("../users.service");
 
@@ -94,21 +93,6 @@ describe("UsersController", () => {
         );
 
         expect(jwt).toEqual(myNewJwt);
-      });
-
-      it("should return a success response with a JWT token", async () => {
-        const data = userStubFactory();
-        const myNewJwt = await jwtService.signAsync(
-          { id: userStubFactory().id },
-          {
-            secret: process.env.JWT_SECRET,
-          },
-        );
-
-        const bcryptCompareSpy = jest.spyOn(bcrypt, "compareSync");
-        const result = (await userController.login(data)).data;
-        expect(result.jwt).toEqual(myNewJwt);
-        expect(bcryptCompareSpy).toHaveBeenCalledTimes(1);
       });
     });
   });

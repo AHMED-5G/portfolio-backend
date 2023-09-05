@@ -10,6 +10,7 @@ import { ApiResponseClass } from "../utils/functions";
 export class AuthGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest();
+
     const jwt = request?.headers?.authorization?.split(" ")[1];
 
     const failureResponse = ApiResponseClass.failureResponse({

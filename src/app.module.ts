@@ -5,7 +5,7 @@ import { UsersModule } from "./users/users.module";
 import { APP_INTERCEPTOR } from "@nestjs/core";
 import { UserInterceptor } from "./users/interceptors/user.interceptor";
 import { TypeOrmModule } from "@nestjs/typeorm";
-import { myDataSourceOptions } from "../typeOrm.config";
+import { myDataSourceOptions } from "../typeOrm.config.js";
 
 console.log("database.module.ts  -> ", process.env.NODE_ENV);
 

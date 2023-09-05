@@ -21,14 +21,14 @@ export class UsersService {
     try {
       const resetTokenObject: ResetToken = await this.resetTokensRepository
         .createQueryBuilder("reset_token")
-        .where({
-          email: body.email,
-        })
-        .orderBy({ createdAt: "DESC" })
+        .where("reset_token.email = :email", { email: body.email })
+        .orderBy("reset_token.createdAt", "DESC")
         .take(1)
         .getOne();
 
-      if (!resetTokenObject) return null;
+      if (!resetTokenObject) {
+        return null;
+      }
 
       const expirationTime = +resetTokenObject.expire_timeStamp;
       const currentTimestamp = Date.now();
@@ -48,14 +48,19 @@ export class UsersService {
         },
       });
 
-      if (!user) return null;
+      if (!user) {
+        return null;
+      }
 
       const hashedPassword = hashPassword(body.newPassword);
       user.password = hashedPassword;
 
       const savedUser = await this.usersRepository.save(user);
 
-      if (!savedUser) return null;
+      if (!savedUser) {
+        return null;
+      }
+
       return savedUser;
     } catch (error) {
       console.error(error);

@@ -27,7 +27,7 @@ const postgressConfig: DataSourceOptions = {
   username: configService.getOrThrow("DB_USERNAME"),
   password: configService.getOrThrow("DB_PASSWORD"),
   synchronize: false,
-  migrations: ["dist/migrations/**"],
+  migrations: ["./migrations/**"],
   entities: ["dist/**/*.entity.js"],
 };
 export const myDataSourceOptions: DataSourceOptions =

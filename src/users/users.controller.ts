@@ -11,10 +11,7 @@ import { UsersService } from "./users.service";
 import { JwtService } from "@nestjs/jwt";
 import * as nodemailer from "nodemailer";
 import { ApiResponse } from "shared-data/types";
-import {
-  MeSuccessObject,
-  RequestLoginSuccessObject,
-} from "shared-data/constants/requestsData";
+
 import { MeUserResponse } from "./dto/user.dto";
 import { plainToClass } from "class-transformer";
 import { UserD } from "./decorators/user.decorator";
@@ -22,13 +19,17 @@ import { UserTokenPayload } from "src/types";
 import { AuthGuard } from "../../src/guards/auth.guard";
 import { ApiResponseClass, hashPassword } from "../utils/functions";
 import { LoginUserDto } from "./dto/login-user.dto";
-import { ApiOkResponse } from "@nestjs/swagger";
+import { ApiBadRequestResponse, ApiOkResponse } from "@nestjs/swagger";
 import { ResetPasswordDto } from "./dto/reset-password-require-data.dto";
 import { validate } from "class-validator";
 import { CreateUserDto } from "./dto/create-user.dto";
 import SMTPTransport from "nodemailer/lib/smtp-transport";
+import { API_PATH } from "../../shared-data/constants/apiUrls";
+import { MeSuccessObject } from "shared-data/constants";
+import { LoginResponseDto } from "./dto/login-responce.dto";
 
-@Controller("users")
+// @UseFilters(new CustomExceptionFilter())
+@Controller(API_PATH + "/users")
 export class UsersController {
   constructor(
     private readonly usersService: UsersService,
@@ -40,6 +41,12 @@ export class UsersController {
     @Body() createUserDto: CreateUserDto,
   ): Promise<ApiResponse<null>> {
     try {
+      const errors = await validate(createUserDto);
+      if (errors.length > 0) {
+        return ApiResponseClass.failureResponse({
+          codeMessage: "Validation failed",
+        });
+      }
       const hashedPassword = hashPassword(createUserDto.password);
       createUserDto.password = hashedPassword;
       this.usersService.create(createUserDto);
@@ -51,10 +58,13 @@ export class UsersController {
     }
   }
 
+  @ApiOkResponse({
+    type: LoginResponseDto,
+  })
   @Post("login")
   async login(
     @Body() data: LoginUserDto,
-  ): Promise<ApiResponse<RequestLoginSuccessObject>> {
+  ): Promise<ApiResponse<LoginResponseDto>> {
     const user = await this.usersService.findOneByEmail(data.email);
 
     if (!user || !bcrypt.compareSync(data.password, user.password)) {
@@ -195,19 +205,15 @@ export class UsersController {
     }
   }
 
+  @ApiBadRequestResponse({
+    description: "Validation failed",
+    // type: ErrorResponseDto,
+  })
   @Post("reset-password")
   async resetPassword(
     @Body() data: ResetPasswordDto,
   ): Promise<ApiResponse<null>> {
     try {
-      //validate data
-      const validationErrors = await validate(data);
-      if (validationErrors.length > 0) {
-        return ApiResponseClass.failureResponse({
-          codeMessage: "Validation failed",
-        });
-      }
-
       const user = await this.usersService.resetPassword(data);
 
       if (user) {

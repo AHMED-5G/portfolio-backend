@@ -10,7 +10,7 @@ export class CreateUserDto {
   email: string;
 
   // @IsString()
-  @ApiProperty({ example: "123456", required: true })
   // @Length(6, 20)
+  @ApiProperty({ example: "123456", required: true })
   password: string;
 }

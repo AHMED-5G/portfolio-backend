@@ -3,7 +3,6 @@ import { CreateUserDto } from "./dto/create-user.dto";
 import { User } from "./entities/user.entity";
 import { FindOneOptions, Repository } from "typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
-import { validate } from "class-validator";
 import { ResetToken } from "./entities/resetToken.entity";
 import { hashPassword } from "../../src/utils";
 import { ResetPasswordDto } from "./dto/reset-password-require-data.dto";
@@ -83,13 +82,9 @@ export class UsersService {
     }
   }
 
-  async create(createUserDto: CreateUserDto) {
-    const errors = await validate(createUserDto);
-    if (errors.length > 0) {
-      throw new Error("Validation failed");
-    }
+  async create(createUserDto: CreateUserDto): Promise<User> {
     const user = new User(createUserDto);
-    return this.usersRepository.save(user);
+    return await this.usersRepository.save(user);
   }
 
   getUserById(id: number): Promise<User> {

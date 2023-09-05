@@ -12,6 +12,7 @@ import { MeSuccessObject } from "shared-data/constants/requestsData";
 import { MeUserResponse } from "../dto/user.dto";
 import { MyJwtSigner } from "src/utils";
 import * as bcrypt from "bcrypt";
+
 jest.mock("../users.service");
 
 describe("UsersController", () => {
@@ -28,7 +29,10 @@ describe("UsersController", () => {
         UsersService,
         {
           provide: USER_REPOSITORY_TOKEN,
-          useValue: {},
+          useValue: {
+            save: jest.fn(),
+            create: jest.fn(),
+          },
         },
         JwtService,
         {
@@ -144,6 +148,25 @@ describe("UsersController", () => {
     // user object shouldn't have password
     it("should not have password", () => {
       expect(user).not.toHaveProperty("password");
+    });
+  });
+
+  describe("register", () => {
+    beforeEach(async () => {
+      await userController.register({
+        email: userStubFactory().email,
+        password: userStubFactory().password,
+      });
+    });
+
+    it("should call user service with correct data", async () => {
+      // Example pattern for bcrypt hashed passwords
+      const hashedPasswordPattern = /^\$2[ayb]\$.{56}$/;
+
+      expect(userService.create).toBeCalledWith({
+        email: userStubFactory().email,
+        password: expect.stringMatching(hashedPasswordPattern),
+      });
     });
   });
 });

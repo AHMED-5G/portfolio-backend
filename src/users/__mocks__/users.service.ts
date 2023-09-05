@@ -13,4 +13,5 @@ export const UsersService = jest.fn().mockReturnValue({
     ...userStubFactory(),
     password: hashPassword(userStubFactory().password),
   }),
+  create: jest.fn(),
 });

@@ -9,7 +9,7 @@ import { Repository } from "typeorm";
 describe("UserService", () => {
   let service: UsersService;
   let userRepository: Repository<User>;
-
+  let resetTokensRepository: Repository<ResetToken>;
   const USER_REPOSITORY_TOKEN = getRepositoryToken(User);
 
   beforeEach(async () => {
@@ -25,13 +25,18 @@ describe("UserService", () => {
         },
         {
           provide: getRepositoryToken(ResetToken),
-          useValue: {},
+          useValue: {
+            save: jest.fn(),
+          },
         },
       ],
     }).compile();
 
     service = module.get<UsersService>(UsersService);
     userRepository = module.get<Repository<User>>(USER_REPOSITORY_TOKEN);
+    resetTokensRepository = module.get<Repository<ResetToken>>(
+      getRepositoryToken(ResetToken),
+    );
   });
 
   it("user service should be defined", () => {
@@ -42,13 +47,7 @@ describe("UserService", () => {
     expect(userRepository).toBeDefined();
   });
 
-  describe("register", () => {
-    it("should create a user", async () => {
-      await service.create({
-        email: "email@email.com",
-        password: "password",
-      });
-    });
+  describe("create user", () => {
     it("should call user repository with correct data", async () => {
       await service.create({
         email: "email@email.com",
@@ -61,9 +60,15 @@ describe("UserService", () => {
     });
   });
 
-  //   describe("getUserById", () => {
-  //     it("should create a user", async () => {
-  //       await service.getUserById(1);
-  //     });
-  //   });
+  describe("create Reset Token", () => {
+    it("should call user repository with correct data", async () => {
+      await service.createResetToken("email@email.com");
+
+      expect(resetTokensRepository.save).toBeCalledWith({
+        email: "email@email.com",
+        token: expect.any(String),
+        expire_timeStamp: expect.any(String),
+      });
+    });
+  });
 });

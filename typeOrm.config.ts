@@ -31,6 +31,8 @@ const postgressConfig: DataSourceOptions = {
   migrations: ["dist/migrations/**"],
   entities: ["dist/**/*.entity.js"],
 };
+
+console.log("typeOrm.config.ts -> ", process.env.NODE_ENV);
 export const myDataSourceOptions: DataSourceOptions =
   process.env.NODE_ENV === "development" ? mysqlConfig : postgressConfig;
 

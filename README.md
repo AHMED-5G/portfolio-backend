@@ -8,9 +8,6 @@
 
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 
-### Stay in touch
-
-Website - [https://nestjs.com](https://nestjs.com/) Twitter - [@nestframework](https://twitter.com/nestframework)
 
 # Project
 

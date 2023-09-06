@@ -18,7 +18,7 @@ Website - [https://nestjs.com](https://nestjs.com/) Twitter - [@nestframework](h
 
 ### Project in [![wakatime](https://wakatime.com/badge/user/2b8d577c-8421-4136-96aa-e15e59c6a7d8/project/52fbbbc6-55fc-4849-9a33-8079722b4d73.svg)](https://wakatime.com/projects/portfolio-backend)
 
-## [API Docs](https://portfoliobackendweb.onrender.com/api/v1#/default){:target="_blank"}
+## [API Docs](https://portfoliobackendweb.onrender.com/api/v1#/default)
 
 ## Rood map - [Releases](https://github.com/AHMED-5G/portfolio-backend/releases)
 

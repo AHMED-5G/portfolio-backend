@@ -26,6 +26,10 @@ export class UsersService {
         .take(1)
         .getOne();
 
+      console.log(
+        "users.service.ts -> UsersService -> createdAt",
+        resetTokenObject,
+      );
       if (!resetTokenObject) {
         return null;
       }
@@ -42,6 +46,7 @@ export class UsersService {
         return null;
       }
 
+      console.log("users.service.ts -> UsersService email is  -> ", body.email);
       const user = await this.usersRepository.findOne({
         where: {
           email: body.email,

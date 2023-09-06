@@ -10,7 +10,6 @@ export class ResetPasswordDto implements ResetPasswordRequireData {
   code: string;
 
   @ApiProperty()
-  @IsString()
   newPassword: string;
 
   @IsEmail()

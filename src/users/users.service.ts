@@ -4,8 +4,6 @@ import { User } from "./entities/user.entity";
 import { FindOneOptions, Repository } from "typeorm";
 import { InjectRepository } from "@nestjs/typeorm";
 import { ResetToken } from "./entities/resetToken.entity";
-import { hashPassword } from "../../src/utils";
-import { ResetPasswordDto } from "./dto/reset-password-require-data.dto";
 
 @Injectable()
 export class UsersService {
@@ -17,72 +15,32 @@ export class UsersService {
     private readonly resetTokensRepository: Repository<ResetToken>,
   ) {}
 
-  async resetPassword(body: ResetPasswordDto): Promise<User> {
-    try {
-      const resetTokenObject: ResetToken = await this.resetTokensRepository
-        .createQueryBuilder("reset_token")
-        .where("reset_token.email = :email", { email: body.email })
-        .orderBy("reset_token.createdAt", "DESC")
-        .take(1)
-        .getOne();
+  async findLastReestTokenByEmail(email: string): Promise<ResetToken> {
+    return await this.resetTokensRepository
+      .createQueryBuilder("reset_token")
+      .where("reset_token.email = :email", { email: email })
+      .orderBy("reset_token.createdAt", "DESC")
+      .take(1)
+      .getOne();
+  }
 
-      console.log(
-        "users.service.ts -> UsersService -> createdAt",
-        resetTokenObject,
-      );
-      if (!resetTokenObject) {
-        return null;
-      }
-
-      const expirationTime = +resetTokenObject.expire_timeStamp;
-      const currentTimestamp = Date.now();
-      const oneHourInMilliseconds = 60 * 60 * 1000;
-
-      if (
-        resetTokenObject.token !== body.code ||
-        expirationTime < currentTimestamp ||
-        expirationTime > currentTimestamp + oneHourInMilliseconds
-      ) {
-        return null;
-      }
-
-      console.log("users.service.ts -> UsersService email is  -> ", body.email);
-      const user = await this.usersRepository.findOne({
-        where: {
-          email: body.email,
-        },
-      });
-
-      if (!user) {
-        return null;
-      }
-
-      const hashedPassword = hashPassword(body.newPassword);
-      user.password = hashedPassword;
-
-      const savedUser = await this.usersRepository.save(user);
-
-      if (!savedUser) {
-        return null;
-      }
-
-      return savedUser;
-    } catch (error) {
-      console.error(error);
-      return null;
-    }
+  async updateUserData(user: User): Promise<User> {
+    return await this.usersRepository.save(user);
   }
 
   async createResetToken(email: string): Promise<ResetToken["token"]> {
     // Create a timestamp for 1 hour from now in Unix format
-    const timeStampInUnix = (Date.now() + 60 * 60 * 1000).toString();
+    const timeStampInUnixAfterOneHour = (
+      Date.now() +
+      60 * 60 * 1000
+    ).toString();
 
     // generate 5 digit token
     const token = Math.floor(10000 + Math.random() * 90000).toString();
 
     const resetToken = new ResetToken({
       email,
-      expire_timeStamp: timeStampInUnix.toString(),
+      expire_timeStamp: timeStampInUnixAfterOneHour.toString(),
       token,
     });
     const savedResetToken = await this.resetTokensRepository.save(resetToken);

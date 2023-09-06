@@ -56,18 +56,20 @@ describe("UserService", () => {
       expect(userRepository.save).toBeCalledWith({
         email: "email@email.com",
         password: "password",
+        createdAt: expect.any(String),
       });
     });
   });
 
   describe("create Reset Token", () => {
-    it("should call user repository with correct data", async () => {
+    it("should call reset token repository with correct data", async () => {
       await service.createResetToken("email@email.com");
 
       expect(resetTokensRepository.save).toBeCalledWith({
         email: "email@email.com",
         token: expect.any(String),
         expire_timeStamp: expect.any(String),
+        createdAt: expect.any(String),
       });
     });
   });

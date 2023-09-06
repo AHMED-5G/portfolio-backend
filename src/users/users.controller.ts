@@ -13,7 +13,7 @@ import * as nodemailer from "nodemailer";
 import { ApiResponse } from "shared-data/types";
 import { MeUserResponse } from "./dto/user.dto";
 import { plainToClass } from "class-transformer";
-import { UserD } from "./decorators/user.decorator";
+// import { UserD } from "./decorators/user.decorator";
 import { UserTokenPayload } from "src/types";
 import { AuthGuard } from "../../src/guards/auth.guard";
 import { ApiResponseClass, hashPassword } from "../utils/functions";
@@ -28,7 +28,6 @@ import { MeSuccessObject } from "shared-data/constants";
 import { LoginResponseDto } from "./dto/login-response.dto";
 import { RequestResetPasswordDto } from "./dto/request-reset-password.dto";
 
-// @UseFilters(new CustomExceptionFilter())
 @Controller(API_PATH + "/users")
 export class UsersController {
   constructor(
@@ -216,15 +215,38 @@ export class UsersController {
     @Body() data: ResetPasswordDto,
   ): Promise<ApiResponse<null>> {
     try {
-      const user = await this.usersService.resetPassword(data);
+      const resetToken = await this.usersService.findLastReestTokenByEmail(
+        data.email,
+      );
 
-      if (user) {
-        return ApiResponseClass.successResponse(null);
-      } else {
+      const expirationTime = +resetToken.expire_timeStamp;
+      const currentTimestamp = Date.now();
+      const oneHourInMilliseconds = 60 * 60 * 1000;
+
+      if (
+        resetToken.token !== data.code ||
+        expirationTime < currentTimestamp ||
+        expirationTime > currentTimestamp + oneHourInMilliseconds
+      ) {
+        return ApiResponseClass.failureResponse({
+          codeMessage: "Invalid code",
+        });
+      }
+
+      const user = await this.usersService.findOneByEmail(data.email);
+
+      if (!user) {
         return ApiResponseClass.failureResponse({
           codeMessage: "User not found",
         });
       }
+
+      const hashedPassword = hashPassword(data.newPassword);
+      user.password = hashedPassword;
+
+      await this.usersService.updateUserData(user);
+
+      return ApiResponseClass.successResponse(null);
     } catch (error) {
       return ApiResponseClass.failureResponse({
         codeMessage: "Something went wrong",
@@ -232,15 +254,15 @@ export class UsersController {
     }
   }
 
-  @Post("update-user-data")
-  async updateUser(
-    @UserD() user: UserTokenPayload,
-  ): Promise<ApiResponse<null>> {
-    if (!user) {
-      return ApiResponseClass.failureResponse({
-        codeMessage: "Unauthorized",
-      });
-    }
-    return ApiResponseClass.successResponse(null);
-  }
+  // @Post("update-user-data")
+  // async updateUser(
+  //   @UserD() user: UserTokenPayload,
+  // ): Promise<ApiResponse<null>> {
+  //   if (!user) {
+  //     return ApiResponseClass.failureResponse({
+  //       codeMessage: "Unauthorized",
+  //     });
+  //   }
+  //   return ApiResponseClass.successResponse(null);
+  // }
 }
